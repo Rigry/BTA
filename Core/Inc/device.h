@@ -1,14 +1,16 @@
 #pragma once
 
 #include "adc.h"
-#include "can.h"
 #include "interrupt.h"
 #include "pin.h"
 #include "pwm.h"
 #include "counter.h"
 #include "service.h"
+#include "can.h"
 
 class Device {
+
+	enum State {wait, heating, cooling, error} state{wait};
 
 	ADC_& adc;
 	PWM& first_fun;
@@ -58,6 +60,60 @@ public:
 	void operator() (){
 
 		service();
+
+		can.outID.state = service.outData.state;
+		can.outID.error = service.outData.error;
+
+		switch(state) {
+			case wait:
+				if(can.inID.control.cool and not service.outData.error.is_alarm()) {
+					state = cooling;
+					cool = true;
+				}
+				if(can.inID.control.heat and not service.outData.error.is_alarm()) {
+					state = heating;
+					heat = true;
+				}
+				led_red = false;
+			break;
+			case heating:
+				if(service.outData.error.is_alarm()) {
+					state = error;
+				}
+
+//				if(service.outData.temp_condens > 50) {
+//
+//				}
+
+			break;
+			case cooling:
+				if(service.outData.error.is_alarm()) {
+					state = error;
+				}
+
+			break;
+			case error:
+				led_red = true;
+				cool = false;
+				heat = false;
+				if(service.outData.error.error_pump) {
+					pump.power = 0;
+					pump.stop();
+					counter.stop();
+				}
+				if(service.outData.error.error_fun_1) {
+					first_fun.power = 0;
+					first_fun.stop();
+				}
+				if(service.outData.error.error_fun_2) {
+					second_fun.power = 0;
+					second_fun.stop();
+				}
+				if(not service.outData.error.is_alarm()) {
+					state = wait;
+				}
+			break;
+		}
 
 		led_green ^= blink.event();
 		led_red ^= counter.is_alarm();

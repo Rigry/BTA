@@ -4,33 +4,10 @@
 #include "interrupt.h"
 
 struct Control {
-	bool test           : 1;
-	bool HV_off         : 1;
-	bool ignition       : 1;
-	bool on_off         : 1;
-	uint16_t res        : 12;
-	uint16_t leak_value : 16;
-	uint16_t kz_value   : 16;
-	uint16_t res3       : 16;
-};
-
-struct State {
-	bool level_first    : 1; // 0
-	bool level_second   : 1; // 1
-	bool kz_on_plus     : 1; // 2
-	bool kz_on_minus    : 1; // 3
-	bool test           : 1; // 4
-	bool test_OK        : 1; // 5
-	bool test_FAILED    : 1; // 6
-	bool HV_off         : 1; // 7
-	//
-	bool ignition       : 1; // 8
-	uint16_t res        : 7;
-	uint8_t leak_value_0 : 8;
-	uint8_t leak_value_1 : 8;
-	uint8_t kz_value_0   : 8;
-	uint8_t kz_value_1   : 8;
-	uint16_t res3       : 16;
+	bool cool           : 1;
+	bool heat           : 1;
+	uint16_t res        : 14;
+	uint16_t res1       : 16;
 };
 
 struct In_id{
@@ -38,7 +15,8 @@ struct In_id{
 };
 
 struct Out_id{
-	State state{0};
+	State_dev state{0};
+	Error_dev error{0};
 };
 
 template <class InID_t, class OutID_t>
@@ -180,7 +158,7 @@ public:
 		  time = 0;
 		  transmit();
 	  }
-	  if(inID.control.on_off) stop_transmit();
+//	  if(inID.control.on_off) stop_transmit();
   }
 
 };

@@ -23,20 +23,25 @@ struct State_dev{
 };
 
 struct Error_dev{
-	bool voltage_board_low   : 1; //0
-	bool error_cool          : 1; //1
-	bool error_heat          : 1; //2
-	bool error_fun_1         : 1; //3
-	bool error_fun_2         : 1; //4
-	bool error_pump          : 1; //5
-	bool error_low_press     : 1; //6
-	bool error_high_press    : 1; //7
-	bool error_t_dev         : 1; //8
-	bool error_t_ex          : 1; //9
-	bool error_t_con         : 1; //10
-	bool error_t_heat1       : 1; //11
-	bool error_t_heat2       : 1; //12
+	bool error_fun_1         : 1; //0
+	bool error_fun_2         : 1; //1
+	bool error_pump          : 1; //2
+	bool error_t_dev         : 1; //3
+	bool error_t_ex          : 1; //4
+	bool error_t_con         : 1; //5
+	bool error_t_heat1       : 1; //6
+	bool error_t_heat2       : 1; //7
+	bool voltage_board_low   : 1; //8
+	bool error_low_press     : 1; //9
+	bool error_high_press    : 1; //10
+	bool error_cool          : 1; //11
+	bool error_heat          : 1; //12
 	uint16_t res             : 4;
+	bool is_alarm() {
+			return error_fun_1 or error_fun_2 or error_pump    or error_t_dev  or
+				   error_t_ex  or error_t_con or error_t_heat1 or error_t_heat2 or
+				   voltage_board_low or error_low_press or error_high_press or error_cool or error_heat;
+	}
 };
 
 struct In_data{
@@ -156,22 +161,29 @@ public:
 	void operator()(){
 
 //		outData.current        = (abs(adc.value(PS) - adc.offset_I_S)) * 100 / 21;
-		outData.voltage_board  = k_adc * adc[VB] * 100;
+		outData.voltage_board  = k_adc * adc[VB] * 100 + 6;
 		outData.temp_dev       = ntc(adc[T_DEV]);
 		outData.temp_exchanger = ntc(adc[T_EX]);
 		outData.temp_condens   = ntc(adc[T_CON]);
 		outData.temp_heat_1    = ntc(adc[T_H1]);
 		outData.temp_heat_2    = ntc(adc[T_H2]);
 
-		press_low = 2.59 * ((k_adc * adc[7]) + 0.06) * 1.5 - 1.29;
+		press_low = 2.59 * ((k_adc * adc[P_L]) + 0.06) * 1.5 - 1.29;
 		press_low = press_low > 0 ? press_low : 0;
 		outData.press_low = press_low * 100;
 
-		press_high = (2.59 * ((k_adc * adc[6]) + 0.06) * 1.5 - 1.29) * 2;
+		press_high = (2.59 * ((k_adc * adc[P_H]) + 0.06) * 1.5 - 1.29) * 2;
 		press_high = press_high > 0 ? press_high : 0;
 		outData.press_high = press_high * 100;
 
 		outData.error.voltage_board_low = (outData.voltage_board <= 180);
+		outData.error.error_t_dev = (adc[T_DEV] > 4000);
+		outData.error.error_t_ex = (adc[T_EX] > 4000);
+		outData.error.error_t_con = (adc[T_CON] > 4000);
+		outData.error.error_t_heat1 = (adc[T_H1] > 4000);
+		outData.error.error_t_heat2 = (adc[T_H2] > 4000);
+		outData.error.error_high_press = (adc[P_H] < 100);
+		outData.error.error_low_press = (adc[P_H] < 100);
 
 		kolhoz ^= timer.event();
 
